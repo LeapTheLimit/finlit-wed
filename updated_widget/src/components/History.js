@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import micIcon from '../assets/images/mic.svg';
 import chatIcon from '../assets/images/chat.svg';
 import gameIcon from '../assets/images/game.svg';
@@ -26,16 +26,10 @@ export default function History({ setCurrentView }) {
 
         history.forEach((message) => {
             if (message.category === 'user') {
-                // If it's a user message, set it in the current conversation
                 currentConversation.userMessage = message.message;
             } else if (message.category === 'bot') {
-                // If it's a bot message, pair it with the user message
                 currentConversation.botResponse = message.message;
-
-                // Push the conversation pair to the list
                 conversations.push(currentConversation);
-
-                // Reset for the next conversation
                 currentConversation = { userMessage: '', botResponse: '' };
             }
         });
@@ -43,45 +37,50 @@ export default function History({ setCurrentView }) {
         return conversations;
     };
 
-    // Fetch the chat history from the backend API
-    useEffect(() => {
-        const fetchChatHistory = async () => {
-            try {
-                const response = await fetch('https://leapthelimit-1057493174729.me-west1.run.app/chat-history');
-                if (!response.ok) {
-                    throw new Error('Failed to fetch chat history');
-                }
-                
-                const data = await response.json();
-                console.log('API Response Data:', data); // Log the data to understand its structure
+    // Fetch chat history with retry mechanism and AbortController
+    const fetchChatHistory = useCallback(async (retryCount = 0) => {
+        const controller = new AbortController(); // Create an AbortController instance
+        try {
+            const response = await fetch('https://leapthelimit-1057493174729.me-west1.run.app/chat-history', {
+                signal: controller.signal,
+            });
+            if (!response.ok) {
+                throw new Error('Failed to fetch chat history');
+            }
+            const data = await response.json();
+            const { history } = data;
 
-                // Extract the history array from the response object
-                const { history } = data;
-                
-                if (Array.isArray(history)) {
-                    // Group the messages into conversations
-                    const conversations = groupConversations(history);
-
-                    // Create summarized history items
-                    const summarizedHistory = conversations.map((conversation, index) => {
-                        const summary = conversation.userMessage || 'Conversation summary not available';
-                        return {
-                            type: 'chat', // or 'voice' depending on how you categorize it
-                            text: `Conversation about: ${summary.substring(0, 50)}...`, // First 50 characters of the user's message
-                        };
-                    });
-
-                    setHistoryItems(summarizedHistory);
+            if (Array.isArray(history)) {
+                const conversations = groupConversations(history);
+                setHistoryItems(conversations);
+            } else {
+                console.error('Unexpected data format:', data);
+            }
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                console.error('Request aborted: ', error);
+            } else if (error.message === 'Failed to fetch') {
+                if (retryCount < 3) {
+                    console.log(`Retrying... (${retryCount + 1}/3)`);
+                    setTimeout(() => fetchChatHistory(retryCount + 1), 1000); // Retry after 1 second
                 } else {
-                    console.error('Unexpected data format:', data);
+                    console.error('Error fetching chat history after multiple attempts:', error);
                 }
-            } catch (error) {
+            } else {
                 console.error('Error fetching chat history:', error);
             }
-        };
+        }
+    }, []);
+
+    useEffect(() => {
+        const controller = new AbortController(); // Create an AbortController instance
 
         fetchChatHistory();
-    }, []);
+
+        return () => {
+            controller.abort(); // Cleanup and abort the fetch if the component unmounts
+        };
+    }, [fetchChatHistory]);
 
     return (
         <div>
@@ -93,7 +92,9 @@ export default function History({ setCurrentView }) {
                 {historyItems.slice(0, 2).map((item, index) => (
                     <div key={index} className="bg-zinc-800 p-3 rounded-lg flex items-center justify-start space-x-3">
                         {getIcon(item.type)}
-                        <span className="text-gray-300 text-xs">{item.text}</span>
+                        <span className="text-gray-300 text-xs">
+                            {item.userMessage.substring(0, 50)}...
+                        </span>
                     </div>
                 ))}
             </div>
