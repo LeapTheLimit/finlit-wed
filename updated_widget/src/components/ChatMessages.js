@@ -2,14 +2,18 @@ import React, { useState, useRef, useEffect } from 'react';
 import startIcon from '../assets/images/start.svg';
 import { ArrowUp, Mic } from 'lucide-react';
 import PoweredBy from './PoweredBy';
+import Header from './Header';  // Importing the Header component
+import PromptSuggestions from './PromptSuggestions';  // Correct import statement
 
-const ChatMessages = () => {
-    const [messages, setMessages] = useState([]);
+const ChatMessages = ({ pastConversation = [], setCurrentView, isHistory = false }) => {
+    const [messages, setMessages] = useState(pastConversation || []);  // Initialize with pastConversation if provided
     const [inputMessage, setInputMessage] = useState('');
-    const [language, setLanguage] = useState('en');  // Default language is English
+    const [listening, setListening] = useState(false);  // Track if the mic is listening
+    const [showSuggestions, setShowSuggestions] = useState(!pastConversation.length); // Show suggestions only if there are no past messages
     const messagesEndRef = useRef(null);
     const serverUrl = 'https://leapthelimit-1057493174729.me-west1.run.app';
 
+    // Scroll to the latest message
     const scrollToBottom = () => {
         if (messages?.length > 0) {
             messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -18,7 +22,7 @@ const ChatMessages = () => {
 
     useEffect(scrollToBottom, [messages]);
 
-    // Function to detect language based on input text
+    // Detect language based on the input text
     const detectLanguage = (text) => {
         const arabicRegex = /[\u0600-\u06FF]/;
         const hebrewRegex = /[\u0590-\u05FF]/;
@@ -31,19 +35,18 @@ const ChatMessages = () => {
         }
     };
 
-    // Function to send message to the chat API and update the state with the response
+    // Send message to the server and update state with the response
     const handleSend = async () => {
         if (inputMessage.trim()) {
             const newUserMessage = { text: inputMessage, sender: 'user' };
             setMessages([...messages, newUserMessage]);
             setInputMessage('');
+            setShowSuggestions(false);  // Hide suggestions after the first message
 
-            // Detect language of the message
-            const detectedLanguage = detectLanguage(inputMessage);
-            setLanguage(detectedLanguage);  // Set language state based on detection
+            const detectedLanguage = detectLanguage(inputMessage);  // Detect language
 
             try {
-                // Send the user message to the chat API
+                // Send user message to API
                 const response = await fetch(`${serverUrl}/chat`, {
                     method: 'POST',
                     headers: {
@@ -51,7 +54,7 @@ const ChatMessages = () => {
                     },
                     body: JSON.stringify({
                         message: inputMessage,
-                        language: detectedLanguage,  // Pass the detected language to the API
+                        language: detectedLanguage,
                     }),
                 });
 
@@ -63,23 +66,15 @@ const ChatMessages = () => {
                 const newFinlixMessage = { text: data.response, sender: 'Finlix' };
                 setMessages((prevMessages) => [...prevMessages, newFinlixMessage]);
 
-                // Save user message to the chat history
+                // Save the entire conversation (user + bot)
                 await fetch(`${serverUrl}/save-chat-message`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        message: inputMessage,  // User message
-                        category: 'user',  // User category
-                    }),
-                });
-
-                // Save bot response to the chat history
-                await fetch(`${serverUrl}/save-chat-message`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        message: data.response,  // Bot response
-                        category: 'bot',  // Bot category
+                        conversation: [
+                            { message: inputMessage, category: 'user' },
+                            { message: data.response, category: 'bot' },
+                        ],
                     }),
                 });
 
@@ -97,12 +92,58 @@ const ChatMessages = () => {
         }
     };
 
+    // Handle suggestion click
+    const handleSuggestionClick = (suggestion) => {
+        setInputMessage(suggestion);
+        setShowSuggestions(false);  // Hide suggestions when a suggestion is clicked
+    };
+
+    // Speech recognition function
+    const startSpeechRecognition = () => {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (!SpeechRecognition) {
+            alert('Speech recognition is not supported in your browser.');
+            return;
+        }
+
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'en-US';
+        recognition.interimResults = false;
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            setInputMessage(transcript);
+        };
+
+        recognition.onerror = (event) => {
+            console.error(`Speech recognition error: ${event.error}`);
+            alert('An error occurred with speech recognition: ' + event.error);
+        };
+
+        recognition.onend = () => {
+            setListening(false);
+        };
+
+        recognition.start();
+        setListening(true);
+    };
+
     return (
         <div className="flex flex-col md:h-full h-full bg-black text-white items-center">
+            {/* Show header when in past conversation view */}
+            {isHistory && <Header setCurrentView={setCurrentView} />}
             <div className='mb-3'>
                 <PoweredBy />
             </div>
             <div className="overflow-y-auto scrollbar-none w-full h-[450px] md:h-[450px]">
+                {/* Show suggestions only if there are no messages yet */}
+                {showSuggestions && messages.length === 0 && (
+                    <div className="p-4">
+                        <h3 className="text-lg font-bold mb-2">Suggestions:</h3>
+                        <PromptSuggestions onSelectPrompt={handleSuggestionClick} />
+                    </div>
+                )}
                 <div className="space-y-2 overflow-y-auto scrollbar-none h-[450px] md:h-[450px] md:pb-4 relative z-[10]">
                     {messages.map((message, index) => (
                         <div key={index} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -111,7 +152,7 @@ const ChatMessages = () => {
                                     <img src={startIcon} alt='startIcon' />
                                 </div>
                             )}
-                            <div className={`rounded-xl px-4 py-2 max-w-[80%] font-medium ${message.sender === 'user' ? 'bg-[#C736D9] text-white rounded-br-none' : 'bg-[#E9E9EB] text-black my-2'
+                            <div className={`rounded-lg px-3 py-2 max-w-[75%] font-medium ${message.sender === 'user' ? 'bg-[#C736D9] text-white rounded-br-none' : 'bg-[#E9E9EB] text-black my-1 rounded-bl-none'
                                 }`}>
                                 <p className="text-sm">{message.text}</p>
                             </div>
@@ -122,8 +163,12 @@ const ChatMessages = () => {
             </div>
             <div className="fixed z-20 md:relative bottom-[130px] md:bottom-0 left-0 right-0 w-[85%] md:w-full mx-auto flex items-center bg-white rounded-xl p-1">
                 <div className="flex-1 flex items-center">
-                    <button className="p-2">
-                        <Mic color='#828282' />
+                    <button className="p-2" onClick={startSpeechRecognition}>
+                        {listening ? (
+                            <Mic color='#C736D9' />  // Change color while listening
+                        ) : (
+                            <Mic color='#828282' />
+                        )}
                     </button>
                     <input
                         type="text"
