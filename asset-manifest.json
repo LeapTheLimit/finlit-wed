@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/finlit-wed/static/css/main.545ac3ff.css",
-    "main.js": "/finlit-wed/static/js/main.677ea254.js",
+    "main.js": "/finlit-wed/static/js/main.5854f0b9.js",
     "static/js/453.bc1ee248.chunk.js": "/finlit-wed/static/js/453.bc1ee248.chunk.js",
     "static/media/mic.svg": "/finlit-wed/static/media/mic.cc6bbaec2dbe3cac78dcaca5160d0a7a.svg",
     "static/media/game.svg": "/finlit-wed/static/media/game.64a20cb10b927a4036c3baaed638c130.svg",
@@ -13,11 +13,11 @@
     "static/media/Closed.svg": "/finlit-wed/static/media/Closed.0a7e1bfe83eb8fcad1b4ab33ff35a996.svg",
     "static/media/start.svg": "/finlit-wed/static/media/start.ac15180422b613275ca6853eb504839a.svg",
     "main.545ac3ff.css.map": "/finlit-wed/static/css/main.545ac3ff.css.map",
-    "main.677ea254.js.map": "/finlit-wed/static/js/main.677ea254.js.map",
+    "main.5854f0b9.js.map": "/finlit-wed/static/js/main.5854f0b9.js.map",
     "453.bc1ee248.chunk.js.map": "/finlit-wed/static/js/453.bc1ee248.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.545ac3ff.css",
-    "static/js/main.677ea254.js"
+    "static/js/main.5854f0b9.js"
   ]
 }
