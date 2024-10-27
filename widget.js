@@ -1,14 +1,36 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import ReactToWebComponent from 'react-to-webcomponent';
 import App from './App';
 import './index.css';
 import './App.css';
-import { defineCustomElements } from '@webcomponents/custom-elements';
+
+class FinlitWidget extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    const mountPoint = document.createElement('div');
+    this.shadowRoot.appendChild(mountPoint);
+
+    // Create a style element to ensure styles are applied
+    const styleElement = document.createElement('style');
+    styleElement.textContent = `
+      /* Add any global widget-specific styles here to avoid conflicts */
+      #finlit-widget-root {
+        font-family: Arial, sans-serif;
+        color: #333;
+      }
+      /* Custom styles from App.css and index.css */
+      ${require('./index.css').toString()}
+      ${require('./App.css').toString()}
+    `;
+    this.shadowRoot.appendChild(styleElement);
+
+    ReactDOM.render(<App />, mountPoint);
+  }
+}
 
 // Define the custom element
-const FinlitWidget = ReactToWebComponent(App, React, ReactDOM);
 customElements.define('finlit-widget', FinlitWidget);
-
-// Ensure the polyfill is included for older browsers
-defineCustomElements();
