@@ -4,13 +4,12 @@
   
   "version": "0.1.0",
   
+  "homepage": "https://abedqwasmi.github.io/finlit-wed",
+  
   "private": true,
   
   "dependencies": {
-    "homepage": "https://abedqwasmi.github.io/finlit-wed/",
-    
-  "@testing-library/jest-dom": "^5.17.0",
-  
+    "@testing-library/jest-dom": "^5.17.0",
     
   "@testing-library/react": "^13.4.0",
   
@@ -49,7 +48,13 @@
   "build": "cross-env NODE_OPTIONS=--openssl-legacy-provider react-scripts build",
   
     
-  "test": "cross-env NODE_OPTIONS=--openssl-legacy-provider react-scripts test"
+  "test": "cross-env NODE_OPTIONS=--openssl-legacy-provider react-scripts test",
+  
+    
+  "predeploy": "npm run build",
+  
+    
+  "deploy": "gh-pages -d build"
   
   },
   
@@ -135,9 +140,7 @@
   "postcss": "^8.4.47",
   
     
-  "tailwindcss": "^3.4.12",
-"predeploy": "npm run build",
-"deploy": "gh-pages -d build"
-
+  "tailwindcss": "^3.4.12"
+  
   }
 }
